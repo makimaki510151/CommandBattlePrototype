@@ -92,5 +92,28 @@ export const characters = [
             name: '影渡り', desc: '姿を消し、敵単体に致命的な一撃を与える。',
             condition: (player) => player.status.hp === player.status.maxHp
         }
+    },
+    {
+        id: 'char05', name: '蕩夜零唯', role: '魔導士', image: 'images/char05.png',
+        attackType: 'physical',
+        status: { 
+            maxHp: 100, hp: 100, 
+            maxMp: 250, mp: 250, 
+            atk: 5, matk: 45, 
+            def: 10, mdef: 25, 
+            spd: 28, 
+            support: 70, 
+            criticalRate: 0.15, dodgeRate: 0.35, criticalMultiplier: 1.5
+        },
+        passive: { name: '先制攻撃', desc: 'ターン開始時、確率で相手を魅了する' },
+        active: [
+            { name: '二連斬り', desc: '敵単体に2回連続で物理攻撃を行う。' },
+            { name: '煙幕', desc: '敵全体の命中率を低下させる。' },
+            { name: 'ぶんどる', desc: '敵からアイテムを盗む。' }
+        ],
+        special: { 
+            name: '影渡り', desc: '姿を消し、敵単体に致命的な一撃を与える。',
+            condition: (player) => player.status.hp === player.status.maxHp
+        }
     }
 ];

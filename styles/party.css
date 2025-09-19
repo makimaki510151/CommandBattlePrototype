@@ -1,33 +1,37 @@
 /* party.css */
 
+#party-screen {
+    /* 既存のスタイル */
+    width: 90%;
+    /* 親要素の90%の幅に設定 */
+    max-width: 1400px;
+    /* 最大幅を1400pxに設定 */
+    margin: 0 auto;
+    /* 中央寄せにする */
+}
+
 /* パーティー編成画面のメインコンテナ */
 .main-content {
     display: flex;
-    /* Flexboxを使って左右に配置 */
     gap: 20px;
-    /* 要素間の隙間 */
     padding: 20px;
     background-color: #f0f4c3;
-    /* 目に優しい背景色 */
     border-radius: 0 0 20px 20px;
     flex-grow: 1;
-    /* 親要素の高さ全体に広がる */
-    max-width: 1200px;
-    /* 最大幅を設定して中央に寄せる */
+    max-width: 1600px;
+    /* 1400pxから希望の値に変更 */
+    /* UI全体の幅を広げます */
     margin: 0 auto;
-    /* 中央寄せ */
+    height: 700px;
 }
 
 .character-pane {
-    flex: 2;
+    flex: 10;
     background-color: #fff;
     padding: 15px;
     border-radius: 10px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     overflow-y: auto;
-    /* 縦方向のスクロールを有効にする */
-    height: 600px;
-    /* 固定高さを設定 */
 }
 
 .right-pane {
@@ -44,23 +48,24 @@
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     flex-grow: 1;
     overflow-y: auto;
-    /* 詳細パネルもスクロール可能にする */
+    height: 450px;
+    min-width: 300px;
+    /* キャラクター未選択時の幅を固定 */
 }
 
-/* パーティースロットのコンテナ */
-#party-slots {
+/* パーティースロットのレイアウト */
+.party-slots {
+    /* この部分はそのまま */
+    margin-top: 15px;
     background-color: #e8f5e9;
     padding: 15px;
     border-radius: 10px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-/* パーティースロットのレイアウト */
-.party-slots-container {
+    /* これを追加 */
     display: flex;
     justify-content: space-around;
+    /* 子要素を均等に配置 */
     gap: 10px;
-    margin-top: 15px;
 }
 
 /* 各パーティースロット */
@@ -70,7 +75,6 @@
     background-color: #c8e6c9;
     border: 2px dashed #4caf50;
     border-radius: 50%;
-    /* 円形にする */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -85,7 +89,6 @@
 
 .party-slot.filled {
     border-style: solid;
-    /* キャラクターがセットされたら実線にする */
 }
 
 /* キャラクターアイコン */
@@ -98,41 +101,30 @@
 
 /* キャラクター詳細の各セクション */
 .character-card .char-thumb {
-    width: 60px;    /* 画像の幅を60pxに設定 */
-    height: 60px;   /* 画像の高さを60pxに設定 */
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
-    margin-right: 15px;
     object-fit: cover;
 }
 
 /* 選択されたキャラクターカードのスタイル */
 .character-card.selected {
     border: 2px solid #ffab40;
-    /* 選択時にオレンジ色の枠線を表示 */
-    box-shadow: 0 0 10px rgba(255, 171, 64, 0.5);
-    /* 選択時に光る効果を追加 */
 }
 
 #character-details .char-image {
     width: 100px;
-    /* 画像の幅を100pxに制限 */
     height: 100px;
-    /* 画像の高さを100pxに制限 */
     object-fit: cover;
-    /* 画像が歪まないようにトリミング */
     border-radius: 50%;
-    /* 画像を円形に */
     border: 2px solid #555;
     margin-bottom: 10px;
 }
 
 .party-header {
     display: flex;
-    /* Flexboxを有効にする */
     justify-content: space-between;
-    /* 左右の端に配置 */
     align-items: center;
-    /* 垂直方向の中央に揃える */
     padding: 10px 20px;
     background-color: #c8e6c9;
     border-bottom: 2px solid #a5d6a7;
@@ -143,7 +135,6 @@
 .header-buttons {
     display: flex;
     gap: 10px;
-    /* ボタン間の隙間 */
 }
 
 /* ボタン共通のデザイン */
@@ -162,17 +153,78 @@
 /* 戻るボタンのデザイン */
 #back-button {
     background-color: #ef5350;
-    /* 赤色 */
 }
 
 /* 出かけるボタンのデザイン */
 #go-button {
     background-color: #66bb6a;
-    /* 緑色 */
 }
 
 /* ホバー時の効果 */
 .action-button:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* キャラクター一覧のコンテナ */
+#character-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: flex-start;
+    /* これをflex-startに変更 */
+}
+
+/* 各キャラクターカード */
+.character-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 140px;
+    height: 180px;
+    background-color: #fff8e1;
+    border-radius: 10px;
+    padding: 10px;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    text-align: center;
+    justify-content: center;
+}
+
+/* ホバー時の効果 */
+.character-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* キャラクターサムネイルの修正 */
+.character-card .char-thumb {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    margin-bottom: 10px;
+    object-fit: cover;
+}
+
+/* キャラクター情報の修正 */
+.char-info {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: 100%;
+}
+
+.char-info h4 {
+    margin: 0;
+    font-size: 1em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.char-info p {
+    margin: 5px 0 0;
+    font-size: 0.8em;
+    color: #777;
 }
