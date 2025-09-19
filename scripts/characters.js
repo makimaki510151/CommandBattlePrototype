@@ -95,7 +95,7 @@ export const characters = [
     },
     {
         id: 'char05', name: '蕩夜零唯', role: '魔導士', image: 'images/char05.png',
-        attackType: 'physical',
+        attackType: 'magic',
         status: { 
             maxHp: 100, hp: 100, 
             maxMp: 250, mp: 250, 

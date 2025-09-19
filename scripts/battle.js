@@ -117,26 +117,29 @@ async function startNextGroup() {
     await battleLoop();
 }
 
-// 戦闘ループ
+// 戦闘ループ（速度順）
 async function battleLoop() {
     while (true) {
-        // 味方ターンの処理
-        for (let i = 0; i < currentPlayerParty.length; i++) {
-            activePlayerIndex = i;
-            if (currentPlayerParty[i].status.hp > 0) {
-                await playerTurn(currentPlayerParty[i]);
-            }
-            if (isBattleOver()) break;
-        }
-        if (isBattleOver()) break;
+        const allCombatants = [...currentPlayerParty, ...currentEnemies];
+        const aliveCombatants = allCombatants.filter(c => c.status.hp > 0);
 
-        // 敵ターンの処理
-        for (const enemy of currentEnemies) {
-            if (enemy.status.hp > 0) {
-                await enemyTurn(enemy);
-            }
+        // 速度順にソート
+        aliveCombatants.sort((a, b) => b.status.spd - a.status.spd);
+
+        for (const combatant of aliveCombatants) {
             if (isBattleOver()) break;
+            if (combatant.status.hp <= 0) continue;
+
+            if (currentPlayerParty.includes(combatant)) {
+                // 味方ターン
+                activePlayerIndex = currentPlayerParty.indexOf(combatant);
+                await playerTurn(combatant);
+            } else {
+                // 敵ターン
+                await enemyTurn(combatant);
+            }
         }
+
         if (isBattleOver()) break;
     }
 
