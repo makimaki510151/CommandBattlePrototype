@@ -1,3 +1,5 @@
+// main.js
+
 document.addEventListener('DOMContentLoaded', () => {
     const startButton = document.getElementById('start-button');
     const backButton = document.getElementById('back-button');
@@ -29,7 +31,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         partyScreen.classList.add('hidden');
         battleScreen.classList.remove('hidden');
-        window.renderBattle();
+        
+        // renderBattle()の呼び出しを削除し、startBattle()だけに任せる
+        // window.renderBattle(); 
         window.startBattle(); // 戦闘開始
     });
 });

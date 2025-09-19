@@ -1,31 +1,17 @@
-// 仮の敵データ
-const enemies = [
-    {
-        id: 'enemy01', name: 'スライム', image: 'images/enemy01.png',
-        status: { maxHp: 120, hp: 120, maxMp: 0, mp: 0, atk: 20, def: 15, matk: 0, mdef: 10, spd: 20, criticalRate: 0.05, dodgeRate: 0.1, criticalMultiplier: 1.5 }
-    },
-    {
-        id: 'enemy02', name: 'ゴブリン', image: 'images/enemy02.png',
-        status: { maxHp: 180, hp: 180, maxMp: 10, mp: 10, atk: 35, def: 25, matk: 5, mdef: 15, spd: 35, criticalRate: 0.1, dodgeRate: 0.08, criticalMultiplier: 1.5 }
-    },
-    {
-        id: 'enemy03', name: 'オーク', image: 'images/enemy03.png',
-        status: { maxHp: 250, hp: 250, maxMp: 15, mp: 15, atk: 50, def: 40, matk: 10, mdef: 20, spd: 25, criticalRate: 0.05, dodgeRate: 0.05, criticalMultiplier: 1.5 }
-    },
-    {
-        id: 'enemy04', name: 'スケルトン', image: 'images/enemy04.png',
-        status: { maxHp: 150, hp: 150, maxMp: 5, mp: 5, atk: 30, def: 20, matk: 5, mdef: 10, spd: 45, criticalRate: 0.15, dodgeRate: 0.15, criticalMultiplier: 1.5 }
-    },
-];
+import { enemyData, enemyGroups } from './enemies.js';
 
 const enemyPartyEl = document.getElementById('enemy-party');
 const playerPartyEl = document.getElementById('player-party');
 const messageLogEl = document.getElementById('message-log');
 const commandAreaEl = document.getElementById('command-area');
+const battleScreenEl = document.getElementById('battle-screen');
+const goButton = document.getElementById('go-button');
+const partyScreen = document.getElementById('party-screen');
 
 let currentEnemies;
 let currentPlayerParty;
 let activePlayerIndex = 0;
+let currentGroupIndex = 0;
 
 // ダメージ計算関数
 function calculateDamage(attacker, defender, isMagic = false) {
@@ -59,12 +45,12 @@ function updateEnemyDisplay() {
         const hpFill = enemyEl.querySelector('.hp-bar-fill');
         const hpPercentage = (enemy.status.hp / enemy.status.maxHp) * 100;
         hpFill.style.width = `${hpPercentage}%`;
-        
+
         const hpText = enemyEl.querySelector('.hp-text');
         if (hpText) {
             hpText.textContent = `${enemy.status.hp}/${enemy.status.maxHp}`;
         }
-        
+
         if (enemy.status.hp <= 0) {
             enemyEl.classList.add('fainted');
         }
@@ -77,13 +63,13 @@ function updatePlayerDisplay() {
         const playerEl = playerPartyEl.children[index];
         const hpFill = playerEl.querySelector('.hp-bar-fill');
         const mpFill = playerEl.querySelector('.mp-bar-fill');
-        
+
         const hpPercentage = (player.status.hp / player.status.maxHp) * 100;
         const mpPercentage = (player.status.mp / player.status.maxMp) * 100;
-        
+
         hpFill.style.width = `${hpPercentage}%`;
         mpFill.style.width = `${mpPercentage}%`;
-        
+
         const hpText = playerEl.querySelector('.hp-text');
         const mpText = playerEl.querySelector('.mp-text');
         if (hpText) {
@@ -92,7 +78,7 @@ function updatePlayerDisplay() {
         if (mpText) {
             mpText.textContent = `${player.status.mp}/${player.status.maxMp}`;
         }
-        
+
         if (player.status.hp <= 0) {
             playerEl.classList.add('fainted');
         }
@@ -103,8 +89,31 @@ function updatePlayerDisplay() {
 async function startBattle() {
     logMessage('戦闘開始！');
     currentPlayerParty = window.getSelectedParty();
-    currentEnemies = enemies.map(e => ({ ...e, status: { ...e.status } })); // 敵ステータスをコピー
+    currentGroupIndex = 0;
 
+    // 最初の敵グループを設定
+    await startNextGroup();
+}
+
+// 次の敵グループとの戦闘を開始する
+async function startNextGroup() {
+    if (currentGroupIndex >= enemyGroups.length) {
+        // すべてのグループをクリア
+        handleGameWin();
+        return;
+    }
+
+    const group = enemyGroups[currentGroupIndex];
+    logMessage(`${group.name}との戦闘！`);
+
+    // グループの敵データを読み込み
+    currentEnemies = group.enemies.map(enemyId => {
+        const enemy = enemyData.find(e => e.id === enemyId);
+        // ステータスをコピーして新たな敵を作成
+        return { ...enemy, status: { ...enemy.status } };
+    });
+
+    renderBattle(); // 敵パーティーを再描画
     await battleLoop();
 }
 
@@ -130,7 +139,7 @@ async function battleLoop() {
         }
         if (isBattleOver()) break;
     }
-    
+
     // 戦闘終了
     handleBattleEnd();
 }
@@ -178,7 +187,7 @@ function playerTurn(player) {
                         performAreaAttack(player, currentEnemies);
                         actionTaken = true;
                     } else {
-                         logMessage('このスキルはまだ実装されていません。');
+                        logMessage('このスキルはまだ実装されていません。');
                     }
                 }
             } else if (target.classList.contains('action-defend')) {
@@ -290,16 +299,50 @@ function isBattleOver() {
     return !playersAlive || !enemiesAlive;
 }
 
-// 戦闘終了後の処理
+// 敵グループ戦闘終了後の処理
 function handleBattleEnd() {
     const playersAlive = currentPlayerParty.some(p => p.status.hp > 0);
     if (playersAlive) {
-        logMessage('勝利しました！');
+        logMessage('敵グループを撃破しました！');
+        currentGroupIndex++;
+        // プレイヤーのHPとMPを回復
+        currentPlayerParty.forEach(p => {
+            p.status.hp = p.status.maxHp;
+            p.status.mp = p.status.maxMp;
+        });
+        updatePlayerDisplay();
+
+        // 次の戦闘に進むか、全クリか
+        if (currentGroupIndex < enemyGroups.length) {
+            logMessage('次の敵グループに挑みます...');
+            setTimeout(() => {
+                startNextGroup();
+            }, 2000); // 2秒後に次の戦闘開始
+        } else {
+            handleGameWin();
+        }
     } else {
         logMessage('全滅しました... ゲームオーバー');
+        handleGameOver();
     }
+}
+
+// ゲーム勝利処理
+function handleGameWin() {
+    logMessage('すべての敵を倒しました！');
+    logMessage('ゲームクリア！おめでとうございます！');
     commandAreaEl.innerHTML = '';
-    document.getElementById('start-button').disabled = false;
+    goButton.disabled = false;
+    battleScreenEl.classList.add('hidden');
+    partyScreen.classList.remove('hidden');
+}
+
+// ゲームオーバー処理
+function handleGameOver() {
+    commandAreaEl.innerHTML = '';
+    goButton.disabled = false;
+    battleScreenEl.classList.add('hidden');
+    partyScreen.classList.remove('hidden');
 }
 
 // コマンドメニューのテンプレートを生成
@@ -319,7 +362,7 @@ function createCommandMenu() {
 function renderBattle() {
     // 敵パーティーの描画
     enemyPartyEl.innerHTML = '';
-    enemies.forEach(enemy => {
+    currentEnemies.forEach(enemy => { // 変更：currentEnemiesを使用
         const enemyDiv = document.createElement('div');
         enemyDiv.className = 'enemy-character';
         enemyDiv.innerHTML = `
@@ -333,8 +376,7 @@ function renderBattle() {
 
     // 味方パーティーの描画（パーティー編成画面で選んだキャラクターを反映）
     playerPartyEl.innerHTML = '';
-    const partyMembers = window.getSelectedParty();
-    partyMembers.forEach(player => {
+    currentPlayerParty.forEach(player => { // 変更：currentPlayerPartyを使用
         const playerDiv = document.createElement('div');
         playerDiv.className = 'player-character';
         playerDiv.dataset.charId = player.id;
