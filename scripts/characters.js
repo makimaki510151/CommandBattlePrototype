@@ -105,7 +105,7 @@ export const characters = [
             support: 70, 
             criticalRate: 0.15, dodgeRate: 0.35, criticalMultiplier: 1.5
         },
-        passive: { name: '先制攻撃', desc: 'ターン開始時、確率で相手を魅了する' },
+        passive: { name: '妖艶なる書架', desc: 'ターン開始時、確率で相手を魅了する' },
         active: [
             { name: '二連斬り', desc: '敵単体に2回連続で物理攻撃を行う。' },
             { name: '煙幕', desc: '敵全体の命中率を低下させる。' },

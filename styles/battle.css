@@ -2,12 +2,18 @@
     display: none;
 }
 
+#battle-screen {
+    width: 90%;
+    /* または、より広い幅を指定 */
+}
+
 .battle-container {
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 70px);
+    height: calc(110vh);
     background-color: #bbdefb;
     padding: 20px;
+    box-sizing: border-box;
 }
 
 .battlefield {
@@ -27,24 +33,31 @@
     border-radius: 10px;
 }
 
-.enemy-character, .player-character {
+.enemy-character,
+.player-character {
     text-align: center;
     transition: transform 0.3s ease;
     width: 20%;
 }
 
-.enemy-character img, .player-character img {
+.enemy-character img,
+.player-character img {
     width: 80px;
     height: 80px;
     object-fit: contain;
 }
 
-.hp-bar, .mp-bar {
-    width: 70px;
+.hp-bar,
+.mp-bar {
     height: 8px;
     background-color: #ccc;
     border-radius: 4px;
     margin-top: 5px;
+    display: flex;
+    /* Flexboxを有効にする */
+    flex-direction: column;
+    /* 子要素を縦方向に並べる */
+    align-items: center;
 }
 
 .hp-bar-fill {
@@ -67,7 +80,7 @@
     padding: 15px;
     margin-top: 20px;
     gap: 20px;
-    min-height: 150px;
+    min-height: 340px; /* ここを150pxから250pxに変更 */
 }
 
 .log-box {
@@ -99,7 +112,8 @@
     gap: 5px;
 }
 
-.command-button, .skill-button {
+.command-button,
+.skill-button {
     padding: 10px;
     background-color: #4CAF50;
     color: white;
@@ -111,7 +125,8 @@
     width: 100%;
 }
 
-.command-button:hover, .skill-button:hover {
+.command-button:hover,
+.skill-button:hover {
     background-color: #45a049;
 }
 
