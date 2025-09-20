@@ -49,6 +49,7 @@
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     flex-grow: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     height: 450px;
     min-width: 300px;
     position: relative;
@@ -270,7 +271,6 @@
 #details-content {
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
     box-sizing: border-box;
 }
 
