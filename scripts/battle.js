@@ -19,18 +19,18 @@ function calculateDamage(attacker, defender, isMagic = false) {
     let actualDodgeRate = defender.status.dodgeRate;
     if (attacker.name === 'きり（スタイル）' && attacker.targetMemory && attacker.targetMemory.lastTargetId === defender.id && attacker.targetMemory.missed) {
         actualDodgeRate /= 2;
-        logMessage(`${attacker.name}の「執着」が発動し、${defender.name}の回避率が半減した！`);
+        logMessage(`${attacker.name}の「執着」が発動し、${defender.name}の回避率が半減した！`, 'status-effect');
     }
 
     // 「滅気」の効果判定
     if (defender.effects.extinguishSpirit && defender.effects.extinguishSpirit.casterId === attacker.id) {
         actualDodgeRate *= 1.5;
-        logMessage(`${attacker.name}の「滅気」効果により、${defender.name}の回避率が上昇した！`);
+        logMessage(`${attacker.name}の「滅気」効果により、${defender.name}の回避率が上昇した！`, 'status-effect');
     }
 
     // 回避判定
     if (Math.random() < actualDodgeRate) {
-        logMessage(`${defender.name}は攻撃を回避した！`);
+        logMessage(`${defender.name}は攻撃を回避した！`, 'status-effect');
         // 攻撃が外れた場合、きり（スタイル）の執着フラグを立てる
         if (attacker.name === 'きり（スタイル}') {
             attacker.targetMemory = { lastTargetId: defender.id, missed: true };
@@ -54,17 +54,17 @@ function calculateDamage(attacker, defender, isMagic = false) {
     if (attacker.effects.abyssal_worship && defender.effects.abyssian_madness) {
         const damageBoost = attacker.effects.abyssal_worship.casterSupport;
         damage *= damageBoost;
-        logMessage(`${attacker.name}の「深淵の崇拝」が発動し、追加で${damageBoost}ダメージを与えた！`);
+        logMessage(`${attacker.name}の「深淵の崇拝」が発動し、${damageBoost.toFixed(2)}倍のダメージを与えた！`, 'damage');
     }
 
     // 会心判定
     if (Math.random() < attacker.status.criticalRate) {
         damage = Math.floor(damage * attacker.status.criticalMultiplier);
-        logMessage(`会心の一撃！`);
+        logMessage(`会心の一撃！`, 'special-event');
     }
 
-    logMessage(`${attacker.name}の攻撃！${defender.name}に${damage}のダメージ！`);
-    return damage;
+    logMessage(`${attacker.name}の攻撃！${defender.name}に${damage.toFixed(2)}のダメージ！`, 'damage');
+    return damage.toFixed(2);
 }
 
 // 敵キャラクターの更新
@@ -172,7 +172,7 @@ async function battleLoop() {
                 const madnessEffect = combatant.effects.abyssian_madness;
                 const disableChance = 0.1 * madnessEffect.stacks;
                 if (Math.random() < disableChance) {
-                    logMessage(`${combatant.name}は深淵の狂気に陥り、行動不能になった！`);
+                    logMessage(`${combatant.name}は深淵の狂気に陥り、行動不能になった！`, 'status-effect');
                     continue; // 行動をスキップ
                 }
             }
@@ -184,7 +184,7 @@ async function battleLoop() {
                 combatant.status.def = Math.max(1, combatant.status.def * (1 - debuffAmount));
                 combatant.status.mdef = Math.max(1, combatant.status.mdef * (1 - debuffAmount));
                 combatant.status.support = Math.max(1, combatant.status.support * (1 - debuffAmount));
-                logMessage(`${combatant.name}は「衰躯」でステータスが低下した！`);
+                logMessage(`${combatant.name}は「衰躯」でステータスが低下した！`, 'status-effect');
             }
 
             // 「虚空」の効果を適用
@@ -196,16 +196,16 @@ async function battleLoop() {
                 combatant.status.mdef = Math.max(1, combatant.status.mdef * (1 - debuffAmount));
                 combatant.status.spd = Math.max(1, combatant.status.spd * (1 - debuffAmount));
                 combatant.status.support = Math.max(1, combatant.status.support * (1 - debuffAmount));
-                logMessage(`${combatant.name}は「虚空」で全てのステータスが低下した！`);
+                logMessage(`${combatant.name}は「虚空」で全てのステータスが低下した！`, 'status-effect');
             }
-            
+
             // 零唯のパッシブスキル「妖艶なる書架」を処理
             if (combatant.id === 'char05' && currentPlayerParty.includes(combatant)) {
                 currentEnemies.forEach(enemy => {
                     if (enemy.effects.abyssian_madness) {
                         if (Math.random() < 0.5) { // 50%の確率で発動
                             enemy.effects.abyssian_madness.stacks++;
-                            logMessage(`零唯の「妖艶なる書架」が発動！${enemy.name}の狂気スタックが${enemy.effects.abyssian_madness.stacks}になった。`);
+                            logMessage(`零唯の「妖艶なる書架」が発動！${enemy.name}の狂気スタックが${enemy.effects.abyssian_madness.stacks}になった。`, 'special-event');
                         }
                     }
                 });
@@ -219,7 +219,7 @@ async function battleLoop() {
                 // 敵ターン
                 await enemyTurn(combatant);
             }
-            
+
             // ターン終了時の効果を処理
             if (combatant.effects.blood_crystal_drop) { // 血晶の零滴
                 const dropEffect = combatant.effects.blood_crystal_drop;
@@ -227,18 +227,18 @@ async function battleLoop() {
                     const baseDamage = Math.floor(dropEffect.casterMatk * 0.3);
                     const damage = Math.max(1, baseDamage - Math.floor(combatant.status.mdef / 2));
                     combatant.status.hp = Math.max(0, combatant.status.hp - damage);
-                    logMessage(`${combatant.name}は「血晶の零滴」で${damage}のダメージを受けた！`);
+                    logMessage(`${combatant.name}は「血晶の零滴」で${damage}のダメージを受けた！`, 'damage');
                     const caster = currentPlayerParty.find(p => p.id === dropEffect.casterId);
                     if (caster) {
                         const mpRecovery = Math.floor(damage * 5);
                         caster.status.mp = Math.min(caster.status.maxMp, caster.status.mp + mpRecovery);
                         updatePlayerDisplay();
-                        logMessage(`${caster.name}はMPを${mpRecovery}回復した。`);
+                        logMessage(`${caster.name}はMPを${mpRecovery}回復した。`, 'heal');
                     }
                     dropEffect.duration--;
                 } else {
                     delete combatant.effects.blood_crystal_drop;
-                    logMessage(`${combatant.name}の「血晶の零滴」効果が切れた。`);
+                    logMessage(`${combatant.name}の「血晶の零滴」効果が切れた。`, 'status-effect');
                 }
             }
 
@@ -247,16 +247,16 @@ async function battleLoop() {
                 combatant.effects.fadingBody.duration--;
                 if (combatant.effects.fadingBody.duration <= 0) {
                     delete combatant.effects.fadingBody;
-                    logMessage(`${combatant.name}の「衰躯」効果が切れた。`);
+                    logMessage(`${combatant.name}の「衰躯」効果が切れた。`, 'status-effect');
                 }
             }
-            
+
             // 「呪縛」の効果時間減少
             if (combatant.effects.curse) {
                 combatant.effects.curse.duration--;
                 if (combatant.effects.curse.duration <= 0) {
                     delete combatant.effects.curse;
-                    logMessage(`${combatant.name}の「呪縛」効果が切れた。`);
+                    logMessage(`${combatant.name}の「呪縛」効果が切れた。`, 'status-effect');
                 }
             }
 
@@ -265,7 +265,7 @@ async function battleLoop() {
                 combatant.effects.extinguishSpirit.duration--;
                 if (combatant.effects.extinguishSpirit.duration <= 0) {
                     delete combatant.effects.extinguishSpirit;
-                    logMessage(`${combatant.name}の「滅気」効果が切れた。`);
+                    logMessage(`${combatant.name}の「滅気」効果が切れた。`, 'status-effect');
                 }
             }
 
@@ -274,7 +274,7 @@ async function battleLoop() {
                 combatant.effects.void.duration--;
                 if (combatant.effects.void.duration <= 0) {
                     delete combatant.effects.void;
-                    logMessage(`${combatant.name}の「虚空」効果が切れた。`);
+                    logMessage(`${combatant.name}の「虚空」効果が切れた。`, 'status-effect');
                 }
             }
 
@@ -309,7 +309,7 @@ function playerTurn(player) {
                     if (player.effects.curse && damage > 0) {
                         const curseDamage = Math.floor(player.status.maxHp * 0.05);
                         player.status.hp = Math.max(0, player.status.hp - curseDamage);
-                        logMessage(`${player.name}は「呪縛」で${curseDamage}のダメージを受けた！`);
+                        logMessage(`${player.name}は「呪縛」で${curseDamage}のダメージを受けた！`, 'damage');
                     }
                     actionTaken = true;
                 }
@@ -387,13 +387,13 @@ function playerTurn(player) {
                         logMessage('このスキルはまだ実装されていません。');
                         player.status.mp += mpCost; // 未実装スキルのためMPを戻す
                     }
-                    
+
                     if (actionTaken) {
                         // 呪縛の効果判定（スキルによるダメージ）
                         if (player.effects.curse && skill.type === 'attack') { // スキルタイプに応じて修正が必要
                             const curseDamage = Math.floor(player.status.maxHp * 0.05);
                             player.status.hp = Math.max(0, player.status.hp - curseDamage);
-                            logMessage(`${player.name}は「呪縛」で${curseDamage}のダメージを受けた！`);
+                            logMessage(`${player.name}は「呪縛」で${curseDamage}のダメージを受けた！`, 'damage');
                         }
                     }
                 }
@@ -449,7 +449,7 @@ function enemyTurn(enemy) {
                 if (enemy.effects.curse && damage > 0) {
                     const curseDamage = Math.floor(enemy.status.maxHp * 0.05);
                     enemy.status.hp = Math.max(0, enemy.status.hp - curseDamage);
-                    logMessage(`${enemy.name}は「呪縛」で${curseDamage}のダメージを受けた！`);
+                    logMessage(`${enemy.name}は「呪縛」で${curseDamage}のダメージを受けた！`, 'damage');
                     updateEnemyDisplay();
                 }
                 updatePlayerDisplay();
@@ -514,7 +514,7 @@ function performMultiAttack(attacker, target) {
     if (attacker.effects.curse && totalDamage > 0) {
         const curseDamage = Math.floor(attacker.status.maxHp * 0.05);
         attacker.status.hp = Math.max(0, attacker.status.hp - curseDamage);
-        logMessage(`${attacker.name}は「呪縛」で${curseDamage}のダメージを受けた！`);
+        logMessage(`${attacker.name}は「呪縛」で${curseDamage}のダメージを受けた！`, 'damage');
     }
 }
 
@@ -528,7 +528,7 @@ function performAreaAttack(attacker, targets) {
             if (attacker.effects.curse && damage > 0) {
                 const curseDamage = Math.floor(attacker.status.maxHp * 0.05);
                 attacker.status.hp = Math.max(0, attacker.status.hp - curseDamage);
-                logMessage(`${attacker.name}は「呪縛」で${curseDamage}のダメージを受けた！`);
+                logMessage(`${attacker.name}は「呪縛」で${curseDamage}のダメージを受けた！`, 'damage');
             }
         }
     });
@@ -538,7 +538,7 @@ function performAreaAttack(attacker, targets) {
 // 回復アクション
 function performHeal(healer, target) {
     const healAmount = healer.status.support * 2;
-    logMessage(`${healer.name}は${target.name}を${healAmount}回復した。`);
+    logMessage(`${healer.name}は${target.name}を${healAmount}回復した。`, 'heal');
     target.status.hp = Math.min(target.status.maxHp, target.status.hp + healAmount);
     updatePlayerDisplay();
 }
@@ -551,7 +551,7 @@ function performSanctuaryHymn(caster) {
         p.status.hp = Math.min(p.status.maxHp, p.status.hp + healAmount);
         // 補助力に応じたダメージ上昇効果を保存
         p.effects.abyssal_worship = { duration: 5, casterSupport: caster.status.support / 60 };
-        logMessage(`${p.name}は「深淵の崇拝」の効果を得た！`);
+        logMessage(`${p.name}は「深淵の崇拝」の効果を得た！`, 'status-effect');
     });
     updatePlayerDisplay();
 }
@@ -566,11 +566,11 @@ function performAbyssalLogic(caster) {
 
         if (!enemy.effects.abyssian_madness) {
             enemy.effects.abyssian_madness = { stacks: 1, duration: 5 };
-            logMessage(`${enemy.name}は「深淵の狂気」状態になった！`);
+            logMessage(`${enemy.name}は「深淵の狂気」状態になった！`, 'status-effect');
         } else {
             enemy.effects.abyssian_madness.stacks++;
             enemy.effects.abyssian_madness.duration = 5; // ターンをリフレッシュ
-            logMessage(`${enemy.name}の「深淵の狂気」スタックが${enemy.effects.abyssian_madness.stacks}になった。`);
+            logMessage(`${enemy.name}の「深淵の狂気」スタックが${enemy.effects.abyssian_madness.stacks}になった。`, 'status-effect');
         }
     });
 }
@@ -579,7 +579,7 @@ function performAbyssalLogic(caster) {
 function performBloodCrystalDrop(caster, target) {
     // 魔法攻撃力とキャスターIDを保存
     target.effects.blood_crystal_drop = { duration: 3, casterMatk: caster.status.matk, casterId: caster.id };
-    logMessage(`${target.name}は「血晶の零滴」状態になった。`);
+    logMessage(`${target.name}は「血晶の零滴」状態になった。`, 'status-effect');
 }
 
 // 「狂気の再編」の実装
@@ -598,14 +598,14 @@ function performMadnessReorganization(caster) {
         const damage = Math.max(1, baseDamage - Math.floor(target.status.mdef / 2));
 
         target.status.hp = Math.max(0, target.status.hp - damage);
-        logMessage(`${target.name}に「狂気の再編」で${damage}のダメージ！`);
+        logMessage(`${target.name}に「狂気の再編」で${damage}のダメージ！`, 'damage');
 
         // スタックをリセット
         delete target.effects.abyssian_madness;
 
         // 「深淵の残響」を付与
         target.effects.abyssal_echo = { stacks: 5, disableChance: 0.5 };
-        logMessage(`${target.name}に「深淵の残響」が付与された。`);
+        logMessage(`${target.name}に「深淵の残響」が付与された。`, 'status-effect');
     });
 
     updateEnemyDisplay();
@@ -615,10 +615,10 @@ function performMadnessReorganization(caster) {
 function performExtinguishSpirit(caster, target) {
     if (!target.effects.extinguishSpirit || target.effects.extinguishSpirit.casterId !== caster.id) {
         target.effects.extinguishSpirit = { duration: 3, casterId: caster.id };
-        logMessage(`${target.name}は「滅気」状態になった！`);
+        logMessage(`${target.name}は「滅気」状態になった！`, 'status-effect');
     } else {
         target.effects.extinguishSpirit.duration = 3;
-        logMessage(`${target.name}の「滅気」効果がリフレッシュされた。`);
+        logMessage(`${target.name}の「滅気」効果がリフレッシュされた。`, 'status-effect');
     }
 }
 
@@ -627,10 +627,10 @@ function performFadingBody(caster, targets) {
     targets.forEach(target => {
         if (!target.effects.fadingBody) {
             target.effects.fadingBody = { duration: 3, debuffAmount: 0.25 };
-            logMessage(`${target.name}は「衰躯」状態になった！`);
+            logMessage(`${target.name}は「衰躯」状態になった！`, 'status-effect');
         } else {
             target.effects.fadingBody.duration = 3;
-            logMessage(`${target.name}の「衰躯」効果がリフレッシュされた。`);
+            logMessage(`${target.name}の「衰躯」効果がリフレッシュされた。`, 'status-effect');
         }
     });
 }
@@ -639,10 +639,10 @@ function performFadingBody(caster, targets) {
 function performCurse(caster, target) {
     if (!target.effects.curse) {
         target.effects.curse = { duration: 5, casterId: caster.id };
-        logMessage(`${target.name}は「呪縛」状態になった！`);
+        logMessage(`${target.name}は「呪縛」状態になった！`, 'status-effect');
     } else {
         target.effects.curse.duration = 5;
-        logMessage(`${target.name}の「呪縛」効果がリフレッシュされた。`);
+        logMessage(`${target.name}の「呪縛」効果がリフレッシュされた。`, 'status-effect');
     }
 }
 
@@ -651,11 +651,11 @@ function performVoid(caster, targets) {
     targets.forEach(target => {
         let debuffCount = Object.keys(target.effects).length;
         if (target.effects.void) debuffCount--; // 虚空自身はカウントしない
-        
+
         let duration = Math.max(1, debuffCount * 2);
 
         target.effects.void = { duration: duration };
-        logMessage(`${target.name}は「虚空」状態になった！ 効果時間: ${duration}ターン`);
+        logMessage(`${target.name}は「虚空」状態になった！ 効果時間: ${duration}ターン`, 'status-effect');
     });
 }
 
@@ -762,10 +762,12 @@ function renderBattle() {
     commandAreaEl.innerHTML = createCommandMenu();
 }
 
-// 戦闘開始メッセージをログに追加
-function logMessage(message) {
+function logMessage(message, type = '') {
     const p = document.createElement('p');
     p.textContent = message;
+    if (type) {
+        p.classList.add(`log-message`, type);
+    }
     messageLogEl.appendChild(p);
     messageLogEl.scrollTop = messageLogEl.scrollHeight;
 }

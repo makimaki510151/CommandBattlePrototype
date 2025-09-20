@@ -152,3 +152,20 @@
     box-shadow: 0 0 15px rgba(255, 235, 59, 0.8);
     border-radius: 8px;
 }
+/* Log message colors */
+.log-message.damage {
+    color: #d32f2f; /* Red */
+}
+
+.log-message.heal {
+    color: #43a047; /* Green */
+}
+
+.log-message.status-effect {
+    color: #1976d2; /* Blue */
+}
+
+.log-message.special-event {
+    color: #fbc02d; /* Amber */
+    font-weight: bold;
+}
