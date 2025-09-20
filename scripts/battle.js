@@ -301,7 +301,7 @@ function playerTurn(player) {
 
             if (target.classList.contains('action-attack')) {
                 // 攻撃対象を選択
-                logMessage('攻撃する敵を選択してください。');
+                logMessage('対象を選んでください。');
                 const enemySelection = await selectEnemyTarget();
                 if (enemySelection) {
                     const damage = performAttack(player, enemySelection);
@@ -337,12 +337,14 @@ function playerTurn(player) {
 
                     // スキルの効果をここで実行
                     if (skill.name === 'ヒールライト') {
+                        logMessage('回復する味方を選択してください。');
                         const targetPlayer = await selectPlayerTarget();
                         if (targetPlayer) {
                             performHeal(player, targetPlayer);
                             actionTaken = true;
                         }
                     } else if (skill.name === '連撃') {
+                        logMessage('攻撃する敵を選択してください。');
                         const targetEnemy = await selectEnemyTarget();
                         if (targetEnemy) {
                             performMultiAttack(player, targetEnemy);
@@ -358,12 +360,14 @@ function playerTurn(player) {
                         performAbyssalLogic(player);
                         actionTaken = true;
                     } else if (skill.name === '血晶の零滴') {
+                        logMessage('攻撃する敵を選択してください。');
                         const targetEnemy = await selectEnemyTarget();
                         if (targetEnemy) {
                             performBloodCrystalDrop(player, targetEnemy);
                             actionTaken = true;
                         }
                     } else if (skill.name === '滅気') {
+                        logMessage('デバフを付与する敵を選択してください。');
                         const targetEnemy = await selectEnemyTarget();
                         if (targetEnemy) {
                             performExtinguishSpirit(player, targetEnemy);
@@ -373,6 +377,7 @@ function playerTurn(player) {
                         performFadingBody(player, currentEnemies);
                         actionTaken = true;
                     } else if (skill.name === '呪縛') {
+                        logMessage('デバフを付与する敵を選択してください。');
                         const targetEnemy = await selectEnemyTarget();
                         if (targetEnemy) {
                             performCurse(player, targetEnemy);
