@@ -15,10 +15,32 @@ let currentGroupIndex = 0;
 
 // ダメージ計算関数
 function calculateDamage(attacker, defender, isMagic = false) {
+    // きり（スタイル）の「執着」効果判定
+    let actualDodgeRate = defender.status.dodgeRate;
+    if (attacker.name === 'きり（スタイル）' && attacker.targetMemory && attacker.targetMemory.lastTargetId === defender.id && attacker.targetMemory.missed) {
+        actualDodgeRate /= 2;
+        logMessage(`${attacker.name}の「執着」が発動し、${defender.name}の回避率が半減した！`);
+    }
+
+    // 「滅気」の効果判定
+    if (defender.effects.extinguishSpirit && defender.effects.extinguishSpirit.casterId === attacker.id) {
+        actualDodgeRate *= 1.5;
+        logMessage(`${attacker.name}の「滅気」効果により、${defender.name}の回避率が上昇した！`);
+    }
+
     // 回避判定
-    if (Math.random() < defender.status.dodgeRate) {
+    if (Math.random() < actualDodgeRate) {
         logMessage(`${defender.name}は攻撃を回避した！`);
+        // 攻撃が外れた場合、きり（スタイル）の執着フラグを立てる
+        if (attacker.name === 'きり（スタイル}') {
+            attacker.targetMemory = { lastTargetId: defender.id, missed: true };
+        }
         return 0;
+    }
+
+    // 攻撃が当たった場合、執着フラグをリセット
+    if (attacker.name === 'きり（スタイル）' && attacker.targetMemory) {
+        attacker.targetMemory = { lastTargetId: null, missed: false };
     }
 
     let damage;
@@ -99,7 +121,12 @@ async function startBattle() {
     currentGroupIndex = 0;
 
     // プレイヤーと敵に状態管理用オブジェクトを追加
-    currentPlayerParty.forEach(p => p.effects = {});
+    currentPlayerParty.forEach(p => {
+        p.effects = {};
+        if (p.id === 'char06') { // きり（スタイル）に執着のメモリを追加
+            p.targetMemory = { lastTargetId: null, missed: false };
+        }
+    });
 
     // 最初の敵グループを設定
     await startNextGroup();
@@ -150,6 +177,28 @@ async function battleLoop() {
                 }
             }
 
+            // 「衰躯」の効果を適用
+            let originalStatus = { ...combatant.status };
+            if (combatant.effects.fadingBody) {
+                const debuffAmount = 0.25;
+                combatant.status.def = Math.max(1, combatant.status.def * (1 - debuffAmount));
+                combatant.status.mdef = Math.max(1, combatant.status.mdef * (1 - debuffAmount));
+                combatant.status.support = Math.max(1, combatant.status.support * (1 - debuffAmount));
+                logMessage(`${combatant.name}は「衰躯」でステータスが低下した！`);
+            }
+
+            // 「虚空」の効果を適用
+            if (combatant.effects.void) {
+                const debuffAmount = 0.25;
+                combatant.status.atk = Math.max(1, combatant.status.atk * (1 - debuffAmount));
+                combatant.status.matk = Math.max(1, combatant.status.matk * (1 - debuffAmount));
+                combatant.status.def = Math.max(1, combatant.status.def * (1 - debuffAmount));
+                combatant.status.mdef = Math.max(1, combatant.status.mdef * (1 - debuffAmount));
+                combatant.status.spd = Math.max(1, combatant.status.spd * (1 - debuffAmount));
+                combatant.status.support = Math.max(1, combatant.status.support * (1 - debuffAmount));
+                logMessage(`${combatant.name}は「虚空」で全てのステータスが低下した！`);
+            }
+            
             // 零唯のパッシブスキル「妖艶なる書架」を処理
             if (combatant.id === 'char05' && currentPlayerParty.includes(combatant)) {
                 currentEnemies.forEach(enemy => {
@@ -170,18 +219,15 @@ async function battleLoop() {
                 // 敵ターン
                 await enemyTurn(combatant);
             }
-
+            
             // ターン終了時の効果を処理
             if (combatant.effects.blood_crystal_drop) { // 血晶の零滴
                 const dropEffect = combatant.effects.blood_crystal_drop;
                 if (dropEffect.duration > 0) {
-                    // 与えた際の魔法攻撃力に基づいたダメージ
                     const baseDamage = Math.floor(dropEffect.casterMatk * 0.3);
                     const damage = Math.max(1, baseDamage - Math.floor(combatant.status.mdef / 2));
                     combatant.status.hp = Math.max(0, combatant.status.hp - damage);
                     logMessage(`${combatant.name}は「血晶の零滴」で${damage}のダメージを受けた！`);
-
-                    // ダメージに応じてMP回復
                     const caster = currentPlayerParty.find(p => p.id === dropEffect.casterId);
                     if (caster) {
                         const mpRecovery = Math.floor(damage * 5);
@@ -189,13 +235,51 @@ async function battleLoop() {
                         updatePlayerDisplay();
                         logMessage(`${caster.name}はMPを${mpRecovery}回復した。`);
                     }
-
                     dropEffect.duration--;
                 } else {
                     delete combatant.effects.blood_crystal_drop;
                     logMessage(`${combatant.name}の「血晶の零滴」効果が切れた。`);
                 }
             }
+
+            // 「衰躯」の効果時間減少
+            if (combatant.effects.fadingBody) {
+                combatant.effects.fadingBody.duration--;
+                if (combatant.effects.fadingBody.duration <= 0) {
+                    delete combatant.effects.fadingBody;
+                    logMessage(`${combatant.name}の「衰躯」効果が切れた。`);
+                }
+            }
+            
+            // 「呪縛」の効果時間減少
+            if (combatant.effects.curse) {
+                combatant.effects.curse.duration--;
+                if (combatant.effects.curse.duration <= 0) {
+                    delete combatant.effects.curse;
+                    logMessage(`${combatant.name}の「呪縛」効果が切れた。`);
+                }
+            }
+
+            // 「滅気」の効果時間減少
+            if (combatant.effects.extinguishSpirit) {
+                combatant.effects.extinguishSpirit.duration--;
+                if (combatant.effects.extinguishSpirit.duration <= 0) {
+                    delete combatant.effects.extinguishSpirit;
+                    logMessage(`${combatant.name}の「滅気」効果が切れた。`);
+                }
+            }
+
+            // 「虚空」の効果時間減少
+            if (combatant.effects.void) {
+                combatant.effects.void.duration--;
+                if (combatant.effects.void.duration <= 0) {
+                    delete combatant.effects.void;
+                    logMessage(`${combatant.name}の「虚空」効果が切れた。`);
+                }
+            }
+
+            // 元のステータスに戻す
+            combatant.status = originalStatus;
         }
 
         if (isBattleOver()) break;
@@ -220,7 +304,13 @@ function playerTurn(player) {
                 logMessage('攻撃する敵を選択してください。');
                 const enemySelection = await selectEnemyTarget();
                 if (enemySelection) {
-                    performAttack(player, enemySelection);
+                    const damage = performAttack(player, enemySelection);
+                    // 呪縛の効果判定
+                    if (player.effects.curse && damage > 0) {
+                        const curseDamage = Math.floor(player.status.maxHp * 0.05);
+                        player.status.hp = Math.max(0, player.status.hp - curseDamage);
+                        logMessage(`${player.name}は「呪縛」で${curseDamage}のダメージを受けた！`);
+                    }
                     actionTaken = true;
                 }
             } else if (target.classList.contains('action-skill')) {
@@ -230,13 +320,20 @@ function playerTurn(player) {
                 const skillName = target.textContent;
                 const skill = player.active.find(s => s.name === skillName);
                 if (skill) {
-                    if (player.status.mp < skill.mp) {
+                    // 「呪縛」によるMPコスト増加
+                    let mpCost = skill.mp;
+                    if (player.effects.curse) {
+                        mpCost = Math.floor(mpCost * 1.5);
+                        logMessage(`${player.name}の「呪縛」により、MP消費が${mpCost}に増加した。`);
+                    }
+
+                    if (player.status.mp < mpCost) {
                         logMessage(`MPが足りません！`);
                         return; // スキル発動を中止
                     }
 
                     logMessage(`${player.name}は${skill.name}を使った！`);
-                    player.status.mp -= skill.mp; // MP消費
+                    player.status.mp -= mpCost; // MP消費
 
                     // スキルの効果をここで実行
                     if (skill.name === 'ヒールライト') {
@@ -266,9 +363,33 @@ function playerTurn(player) {
                             performBloodCrystalDrop(player, targetEnemy);
                             actionTaken = true;
                         }
+                    } else if (skill.name === '滅気') {
+                        const targetEnemy = await selectEnemyTarget();
+                        if (targetEnemy) {
+                            performExtinguishSpirit(player, targetEnemy);
+                            actionTaken = true;
+                        }
+                    } else if (skill.name === '衰躯') {
+                        performFadingBody(player, currentEnemies);
+                        actionTaken = true;
+                    } else if (skill.name === '呪縛') {
+                        const targetEnemy = await selectEnemyTarget();
+                        if (targetEnemy) {
+                            performCurse(player, targetEnemy);
+                            actionTaken = true;
+                        }
                     } else {
                         logMessage('このスキルはまだ実装されていません。');
-                        player.status.mp += skill.mp; // 未実装スキルのためMPを戻す
+                        player.status.mp += mpCost; // 未実装スキルのためMPを戻す
+                    }
+                    
+                    if (actionTaken) {
+                        // 呪縛の効果判定（スキルによるダメージ）
+                        if (player.effects.curse && skill.type === 'attack') { // スキルタイプに応じて修正が必要
+                            const curseDamage = Math.floor(player.status.maxHp * 0.05);
+                            player.status.hp = Math.max(0, player.status.hp - curseDamage);
+                            logMessage(`${player.name}は「呪縛」で${curseDamage}のダメージを受けた！`);
+                        }
                     }
                 }
             } else if (target.classList.contains('action-special')) {
@@ -284,6 +405,9 @@ function playerTurn(player) {
 
                     if (specialSkill.name === '狂気の再編') {
                         performMadnessReorganization(player);
+                        actionTaken = true;
+                    } else if (specialSkill.name === '虚空') {
+                        performVoid(player, currentEnemies);
                         actionTaken = true;
                     }
                 } else {
@@ -316,6 +440,13 @@ function enemyTurn(enemy) {
                 // 敵の行動（ここではシンプルに物理攻撃）
                 const damage = calculateDamage(enemy, targetPlayer);
                 targetPlayer.status.hp = Math.max(0, targetPlayer.status.hp - damage);
+                // 呪縛の効果判定
+                if (enemy.effects.curse && damage > 0) {
+                    const curseDamage = Math.floor(enemy.status.maxHp * 0.05);
+                    enemy.status.hp = Math.max(0, enemy.status.hp - curseDamage);
+                    logMessage(`${enemy.name}は「呪縛」で${curseDamage}のダメージを受けた！`);
+                    updateEnemyDisplay();
+                }
                 updatePlayerDisplay();
             }
             resolve();
@@ -360,17 +491,26 @@ function performAttack(attacker, target) {
     const damage = calculateDamage(attacker, target, attacker.attackType === 'magic');
     target.status.hp = Math.max(0, target.status.hp - damage);
     updateEnemyDisplay();
+    return damage; // ダメージ量を返すように変更
 }
 
 // 複数回攻撃アクション
 function performMultiAttack(attacker, target) {
     const attacks = 3;
+    let totalDamage = 0;
     for (let i = 0; i < attacks; i++) {
         const damage = calculateDamage(attacker, target, attacker.attackType === 'magic');
         target.status.hp = Math.max(0, target.status.hp - damage);
+        totalDamage += damage;
         if (target.status.hp <= 0) break;
     }
     updateEnemyDisplay();
+    // 呪縛の効果判定
+    if (attacker.effects.curse && totalDamage > 0) {
+        const curseDamage = Math.floor(attacker.status.maxHp * 0.05);
+        attacker.status.hp = Math.max(0, attacker.status.hp - curseDamage);
+        logMessage(`${attacker.name}は「呪縛」で${curseDamage}のダメージを受けた！`);
+    }
 }
 
 // 全体攻撃アクション
@@ -379,6 +519,12 @@ function performAreaAttack(attacker, targets) {
         if (target.status.hp > 0) {
             const damage = calculateDamage(attacker, target, attacker.attackType === 'magic');
             target.status.hp = Math.max(0, target.status.hp - damage);
+            // 呪縛の効果判定
+            if (attacker.effects.curse && damage > 0) {
+                const curseDamage = Math.floor(attacker.status.maxHp * 0.05);
+                attacker.status.hp = Math.max(0, attacker.status.hp - curseDamage);
+                logMessage(`${attacker.name}は「呪縛」で${curseDamage}のダメージを受けた！`);
+            }
         }
     });
     updateEnemyDisplay();
@@ -458,6 +604,54 @@ function performMadnessReorganization(caster) {
     });
 
     updateEnemyDisplay();
+}
+
+// 「滅気」の実装
+function performExtinguishSpirit(caster, target) {
+    if (!target.effects.extinguishSpirit || target.effects.extinguishSpirit.casterId !== caster.id) {
+        target.effects.extinguishSpirit = { duration: 3, casterId: caster.id };
+        logMessage(`${target.name}は「滅気」状態になった！`);
+    } else {
+        target.effects.extinguishSpirit.duration = 3;
+        logMessage(`${target.name}の「滅気」効果がリフレッシュされた。`);
+    }
+}
+
+// 「衰躯」の実装
+function performFadingBody(caster, targets) {
+    targets.forEach(target => {
+        if (!target.effects.fadingBody) {
+            target.effects.fadingBody = { duration: 3, debuffAmount: 0.25 };
+            logMessage(`${target.name}は「衰躯」状態になった！`);
+        } else {
+            target.effects.fadingBody.duration = 3;
+            logMessage(`${target.name}の「衰躯」効果がリフレッシュされた。`);
+        }
+    });
+}
+
+// 「呪縛」の実装
+function performCurse(caster, target) {
+    if (!target.effects.curse) {
+        target.effects.curse = { duration: 5, casterId: caster.id };
+        logMessage(`${target.name}は「呪縛」状態になった！`);
+    } else {
+        target.effects.curse.duration = 5;
+        logMessage(`${target.name}の「呪縛」効果がリフレッシュされた。`);
+    }
+}
+
+// 「虚空」の実装
+function performVoid(caster, targets) {
+    targets.forEach(target => {
+        let debuffCount = Object.keys(target.effects).length;
+        if (target.effects.void) debuffCount--; // 虚空自身はカウントしない
+        
+        let duration = Math.max(1, debuffCount * 2);
+
+        target.effects.void = { duration: duration };
+        logMessage(`${target.name}は「虚空」状態になった！ 効果時間: ${duration}ターン`);
+    });
 }
 
 // 戦闘終了判定
@@ -591,6 +785,13 @@ function updateCommandMenu(player) {
     skillMenuEl.innerHTML = player.active.map(skill => {
         return `<button class="skill-button">${skill.name}</button>`;
     }).join('');
+
+    // きり（スタイル）の必殺技条件
+    if (player.id === 'char06') {
+        player.special.condition = (p) => {
+            return currentEnemies.some(e => Object.keys(e.effects).length >= 2);
+        };
+    }
 
     if (player.special.condition && player.special.condition(player)) {
         specialButtonEl.classList.remove('hidden');
