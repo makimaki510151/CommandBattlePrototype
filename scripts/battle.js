@@ -28,6 +28,13 @@ function calculateDamage(attacker, defender, isMagic = false) {
         damage = Math.max(1, attacker.status.atk - Math.floor(defender.status.def / 2));
     }
 
+    // 「深淵の崇拝」の効果判定
+    if (attacker.effects.abyssal_worship && defender.effects.abyssian_madness) {
+        const damageBoost = attacker.effects.abyssal_worship.casterSupport;
+        damage *= damageBoost;
+        logMessage(`${attacker.name}の「深淵の崇拝」が発動し、追加で${damageBoost}ダメージを与えた！`);
+    }
+
     // 会心判定
     if (Math.random() < attacker.status.criticalRate) {
         damage = Math.floor(damage * attacker.status.criticalMultiplier);
@@ -91,6 +98,9 @@ async function startBattle() {
     currentPlayerParty = window.getSelectedParty();
     currentGroupIndex = 0;
 
+    // プレイヤーと敵に状態管理用オブジェクトを追加
+    currentPlayerParty.forEach(p => p.effects = {});
+
     // 最初の敵グループを設定
     await startNextGroup();
 }
@@ -110,7 +120,7 @@ async function startNextGroup() {
     currentEnemies = group.enemies.map(enemyId => {
         const enemy = enemyData.find(e => e.id === enemyId);
         // ステータスをコピーして新たな敵を作成
-        return { ...enemy, status: { ...enemy.status } };
+        return { ...enemy, status: { ...enemy.status }, effects: {} }; // effectsを追加
     });
 
     renderBattle(); // 敵パーティーを再描画
@@ -130,6 +140,28 @@ async function battleLoop() {
             if (isBattleOver()) break;
             if (combatant.status.hp <= 0) continue;
 
+            // ターン開始時の効果を処理
+            if (combatant.effects.abyssian_madness) { // 深淵の狂気
+                const madnessEffect = combatant.effects.abyssian_madness;
+                const disableChance = 0.1 * madnessEffect.stacks;
+                if (Math.random() < disableChance) {
+                    logMessage(`${combatant.name}は深淵の狂気に陥り、行動不能になった！`);
+                    continue; // 行動をスキップ
+                }
+            }
+
+            // 零唯のパッシブスキル「妖艶なる書架」を処理
+            if (combatant.id === 'char05' && currentPlayerParty.includes(combatant)) {
+                currentEnemies.forEach(enemy => {
+                    if (enemy.effects.abyssian_madness) {
+                        if (Math.random() < 0.5) { // 50%の確率で発動
+                            enemy.effects.abyssian_madness.stacks++;
+                            logMessage(`零唯の「妖艶なる書架」が発動！${enemy.name}の狂気スタックが${enemy.effects.abyssian_madness.stacks}になった。`);
+                        }
+                    }
+                });
+            }
+
             if (currentPlayerParty.includes(combatant)) {
                 // 味方ターン
                 activePlayerIndex = currentPlayerParty.indexOf(combatant);
@@ -137,6 +169,32 @@ async function battleLoop() {
             } else {
                 // 敵ターン
                 await enemyTurn(combatant);
+            }
+
+            // ターン終了時の効果を処理
+            if (combatant.effects.blood_crystal_drop) { // 血晶の零滴
+                const dropEffect = combatant.effects.blood_crystal_drop;
+                if (dropEffect.duration > 0) {
+                    // 与えた際の魔法攻撃力に基づいたダメージ
+                    const baseDamage = Math.floor(dropEffect.casterMatk * 0.3);
+                    const damage = Math.max(1, baseDamage - Math.floor(combatant.status.mdef / 2));
+                    combatant.status.hp = Math.max(0, combatant.status.hp - damage);
+                    logMessage(`${combatant.name}は「血晶の零滴」で${damage}のダメージを受けた！`);
+
+                    // ダメージに応じてMP回復
+                    const caster = currentPlayerParty.find(p => p.id === dropEffect.casterId);
+                    if (caster) {
+                        const mpRecovery = Math.floor(damage * 5);
+                        caster.status.mp = Math.min(caster.status.maxMp, caster.status.mp + mpRecovery);
+                        updatePlayerDisplay();
+                        logMessage(`${caster.name}はMPを${mpRecovery}回復した。`);
+                    }
+
+                    dropEffect.duration--;
+                } else {
+                    delete combatant.effects.blood_crystal_drop;
+                    logMessage(`${combatant.name}の「血晶の零滴」効果が切れた。`);
+                }
             }
         }
 
@@ -189,9 +247,32 @@ function playerTurn(player) {
                     } else if (skill.name === 'なぎ払い' || skill.name === 'ブリザード') {
                         performAreaAttack(player, currentEnemies);
                         actionTaken = true;
+                    } else if (skill.name === '蠱惑の聖歌') {
+                        performSanctuaryHymn(player);
+                        actionTaken = true;
+                    } else if (skill.name === '深淵の理路') {
+                        performAbyssalLogic(player);
+                        actionTaken = true;
+                    } else if (skill.name === '血晶の零滴') {
+                        const targetEnemy = await selectEnemyTarget();
+                        if (targetEnemy) {
+                            performBloodCrystalDrop(player, targetEnemy);
+                            actionTaken = true;
+                        }
                     } else {
                         logMessage('このスキルはまだ実装されていません。');
                     }
+                }
+            } else if (target.classList.contains('action-special')) {
+                const specialSkill = player.special;
+                if (specialSkill && specialSkill.condition && specialSkill.condition(player)) {
+                    logMessage(`${player.name}は「${specialSkill.name}」を使った！`);
+                    if (specialSkill.name === '狂気の再編') {
+                        performMadnessReorganization(player);
+                        actionTaken = true;
+                    }
+                } else {
+                    logMessage('必殺技の条件を満たしていません。');
                 }
             } else if (target.classList.contains('action-defend')) {
                 logMessage(`${player.name}は防御した。`);
@@ -292,6 +373,77 @@ function performHeal(healer, target) {
     const healAmount = healer.status.support * 2;
     logMessage(`${healer.name}は${target.name}を${healAmount}回復した。`);
     target.status.hp = Math.min(target.status.maxHp, target.status.hp + healAmount);
+    updatePlayerDisplay();
+}
+
+// 「蠱惑の聖歌」の実装
+function performSanctuaryHymn(caster) {
+    // 補助力に応じた回復量
+    const healAmount = Math.floor(caster.status.support * 0.5);
+    currentPlayerParty.forEach(p => {
+        p.status.hp = Math.min(p.status.maxHp, p.status.hp + healAmount);
+        // 補助力に応じたダメージ上昇効果を保存
+        p.effects.abyssal_worship = { duration: 5, casterSupport: caster.status.support / 60 };
+        logMessage(`${p.name}は「深淵の崇拝」の効果を得た！`);
+    });
+    updatePlayerDisplay();
+}
+
+// 「深淵の理路」の実装
+function performAbyssalLogic(caster) {
+    currentEnemies.forEach(enemy => {
+        if (enemy.effects.abyssal_echo) {
+            logMessage(`${enemy.name}には「深淵の残響」が付与されているため、「深淵の狂気」を付与できません。`);
+            return;
+        }
+
+        if (!enemy.effects.abyssian_madness) {
+            enemy.effects.abyssian_madness = { stacks: 1, duration: 5 };
+            logMessage(`${enemy.name}は「深淵の狂気」状態になった！`);
+        } else {
+            enemy.effects.abyssian_madness.stacks++;
+            enemy.effects.abyssian_madness.duration = 5; // ターンをリフレッシュ
+            logMessage(`${enemy.name}の「深淵の狂気」スタックが${enemy.effects.abyssian_madness.stacks}になった。`);
+        }
+    });
+}
+
+// 「血晶の零滴」の実装
+function performBloodCrystalDrop(caster, target) {
+    // 魔法攻撃力とキャスターIDを保存
+    target.effects.blood_crystal_drop = { duration: 3, casterMatk: caster.status.matk, casterId: caster.id };
+    logMessage(`${target.name}は「血晶の零滴」状態になった。`);
+}
+
+// 「狂気の再編」の実装
+function performMadnessReorganization(caster) {
+    const targets = currentEnemies.filter(e => e.effects.abyssian_madness && e.effects.abyssian_madness.stacks >= 5);
+
+    if (targets.length === 0) {
+        logMessage('必殺技の条件を満たす敵がいません。');
+        return;
+    }
+
+    targets.forEach(target => {
+        const stacks = target.effects.abyssian_madness.stacks;
+        // スタック数と自身の魔法攻撃力に応じた大ダメージ
+        const baseDamage = Math.floor(caster.status.matk * stacks);
+        const damage = Math.max(1, baseDamage - Math.floor(target.status.mdef / 2));
+
+        target.status.hp = Math.max(0, target.status.hp - damage);
+        logMessage(`${target.name}に「狂気の再編」で${damage}のダメージ！`);
+
+        // スタックをリセット
+        delete target.effects.abyssian_madness;
+
+        // 「深淵の残響」を付与
+        target.effects.abyssal_echo = { stacks: 5, disableChance: 0.5 };
+        logMessage(`${target.name}に「深淵の残響」が付与された。`);
+    });
+
+    updateEnemyDisplay();
+    // MPを消費
+    caster.status.mp = Math.max(0, caster.status.mp - 100);
     updatePlayerDisplay();
 }
 
@@ -427,7 +579,7 @@ function updateCommandMenu(player) {
         return `<button class="skill-button">${skill.name}</button>`;
     }).join('');
 
-    if (player.special.condition(player)) {
+    if (player.special.condition && player.special.condition(player)) {
         specialButtonEl.classList.remove('hidden');
     } else {
         specialButtonEl.classList.add('hidden');
