@@ -53,11 +53,6 @@
     background-color: #ccc;
     border-radius: 4px;
     margin-top: 5px;
-    display: flex;
-    /* Flexboxを有効にする */
-    flex-direction: column;
-    /* 子要素を縦方向に並べる */
-    align-items: center;
 }
 
 .hp-bar-fill {

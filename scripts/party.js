@@ -50,13 +50,21 @@ function renderCharacterDetails(char) {
             <p><strong>会心倍率:</strong> ${char.status.criticalMultiplier}倍</p>
         </div>
         <h5>パッシブスキル</h5>
-        <p><strong>${char.passive.name}</strong>: ${char.passive.desc}</p>
+        <p>
+            <strong class="skill-name" data-description="${char.passive.flavor}">${char.passive.name}</strong>: ${char.passive.desc}
+        </p>
         <h5>アクティブスキル</h5>
         <ul>
-            ${char.active.map(skill => `<li><strong>${skill.name}</strong>: ${skill.desc}</li>`).join('')}
+            ${char.active.map(skill => `
+            <li>
+                <strong class="skill-name" data-description="${skill.flavor}">${skill.name}</strong>: ${skill.desc}
+            </li>
+            `).join('')}
         </ul>
         <h5>必殺技</h5>
-        <p><strong>${char.special.name}</strong>: ${char.special.desc}</p>
+        <p>
+            <strong class="skill-name" data-description="${char.special.flavor}">${char.special.name}</strong>: ${char.special.desc}
+        </p>
     `;
 }
 

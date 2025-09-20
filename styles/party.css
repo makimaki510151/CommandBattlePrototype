@@ -42,6 +42,7 @@
 }
 
 #character-details {
+    /* 既存のスタイル */
     background-color: #e8f5e9;
     padding: 15px;
     border-radius: 10px;
@@ -50,7 +51,8 @@
     overflow-y: auto;
     height: 450px;
     min-width: 300px;
-    /* キャラクター未選択時の幅を固定 */
+    position: relative;
+    /* ★ これが重要！すでに追加されています */
 }
 
 /* パーティースロットのレイアウト */
@@ -227,4 +229,69 @@
     margin: 5px 0 0;
     font-size: 0.8em;
     color: #777;
+}
+
+.skill-name {
+    position: relative;
+    cursor: help;
+}
+
+.skill-name::after {
+    content: attr(data-description);
+    position: absolute;
+    left: 100%;
+    top: 120%;
+    transform: translateX(-25%);
+    background-color: #333;
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 6px;
+
+    /* ---- この2行を修正または追加 ---- */
+    white-space: normal;
+    /* 折り返しを有効にする */
+    width: 250px;
+    /* ツールチップの最大幅を指定（任意の値に調整可能） */
+
+    overflow-wrap: break-word;
+    /* 長い単語も折り返す */
+
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+    z-index: 1000;
+}
+
+.skill-name:hover::after {
+    opacity: 1;
+    visibility: visible;
+}
+
+#details-content {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    box-sizing: border-box;
+}
+
+#details-content p,
+#details-content li {
+    word-wrap: break-word;
+    /* 長い単語を強制的に改行 */
+    max-width: 100%;
+    /* 親要素の幅を超えないように制限 */
+}
+
+.status-list {
+    display: flex;
+    flex-wrap: wrap;
+    /* 要素を折り返す */
+    gap: 10px;
+
+    /* 要素間の隙間 */
+    /* 各ステータスの幅を調整して、均等に並べる */
+    p {
+        flex: 1 1 45%;
+        /* 柔軟に幅を調整し、必要なら折り返す */
+    }
 }
