@@ -227,7 +227,7 @@ export const characters = [
         }
     },
     {
-        id: 'char06', name: 'きり（スタイル）', role: '黒魔導士', image: 'images/char06.png',
+        id: 'char06', name: 'きり（ゲーム）', role: '黒魔導士', image: 'images/char06.png',
         attackType: 'magic',
         status: {
             maxHp: 80, hp: 80,
