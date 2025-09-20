@@ -230,7 +230,14 @@ function playerTurn(player) {
                 const skillName = target.textContent;
                 const skill = player.active.find(s => s.name === skillName);
                 if (skill) {
+                    if (player.status.mp < skill.mp) {
+                        logMessage(`MPが足りません！`);
+                        return; // スキル発動を中止
+                    }
+
                     logMessage(`${player.name}は${skill.name}を使った！`);
+                    player.status.mp -= skill.mp; // MP消費
+
                     // スキルの効果をここで実行
                     if (skill.name === 'ヒールライト') {
                         const targetPlayer = await selectPlayerTarget();
@@ -261,12 +268,20 @@ function playerTurn(player) {
                         }
                     } else {
                         logMessage('このスキルはまだ実装されていません。');
+                        player.status.mp += skill.mp; // 未実装スキルのためMPを戻す
                     }
                 }
             } else if (target.classList.contains('action-special')) {
                 const specialSkill = player.special;
                 if (specialSkill && specialSkill.condition && specialSkill.condition(player)) {
+                    if (player.status.mp < specialSkill.mp) {
+                        logMessage(`MPが足りません！`);
+                        return;
+                    }
+
                     logMessage(`${player.name}は「${specialSkill.name}」を使った！`);
+                    player.status.mp -= specialSkill.mp; // MP消費
+
                     if (specialSkill.name === '狂気の再編') {
                         performMadnessReorganization(player);
                         actionTaken = true;
@@ -281,6 +296,7 @@ function playerTurn(player) {
 
             if (actionTaken) {
                 // ターン終了
+                updatePlayerDisplay(); // MP消費を反映
                 commandAreaEl.classList.add('hidden');
                 commandAreaEl.onclick = null;
                 resolve();
@@ -442,9 +458,6 @@ function performMadnessReorganization(caster) {
     });
 
     updateEnemyDisplay();
-    // MPを消費
-    caster.status.mp = Math.max(0, caster.status.mp - 100);
-    updatePlayerDisplay();
 }
 
 // 戦闘終了判定
